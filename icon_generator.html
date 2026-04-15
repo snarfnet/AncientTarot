@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ancient Tarot — Icon Generator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080810;
+    color: #e0d8f0;
+    font-family: 'Georgia', serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+    gap: 32px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #c8b8f0;
+    opacity: 0.8;
+  }
+  #preview {
+    border-radius: 22.37%;
+    overflow: hidden;
+    box-shadow:
+      0 0 60px rgba(120, 80, 220, 0.5),
+      0 0 120px rgba(60, 30, 140, 0.3),
+      inset 0 0 0 1px rgba(200, 180, 255, 0.15);
+    width: 320px;
+    height: 320px;
+  }
+  #preview canvas {
+    width: 320px;
+    height: 320px;
+  }
+  .controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    background: linear-gradient(135deg, #2a1a5e, #1a0e3a);
+    border: 1px solid rgba(180, 140, 255, 0.4);
+    color: #d0c0ff;
+    font-family: 'Georgia', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    padding: 12px 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  button:hover {
+    background: linear-gradient(135deg, #3a2a7e, #2a1a5a);
+    border-color: rgba(200, 170, 255, 0.7);
+    color: #f0e8ff;
+    box-shadow: 0 0 20px rgba(140, 100, 255, 0.3);
+  }
+  .note {
+    font-size: 0.75rem;
+    color: #7060a0;
+    letter-spacing: 0.08em;
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ancient Tarot — App Icon</h1>
+
+<div id="preview">
+  <canvas id="iconCanvas" width="1024" height="1024"></canvas>
+</div>
+
+<div class="controls">
+  <button onclick="downloadIcon()">1024×1024 PNG をダウンロード</button>
+  <button onclick="redraw()">再生成</button>
+</div>
+
+<p class="note">iOS App Store 用 1024×1024px アイコン。<br>角丸マスクは Apple 側で自動適用されます。</p>
+
+<script>
+const canvas = document.getElementById('iconCanvas');
+const ctx = canvas.getContext('2d');
+const W = 1024, H = 1024;
+
+// --- Seeded PRNG for consistent star layout ---
+let seed = 42;
+function rand() {
+  seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+  return (seed >>> 0) / 0xffffffff;
+}
+function randRange(a, b) { return a + rand() * (b - a); }
+
+function draw() {
+  seed = 42;
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawNebula();
+  drawConstellationLines();
+  drawStarField();
+  drawTarotCard();
+  drawCelestialSymbols();
+  drawBrightStars();
+  drawGlowOverlay();
+  drawTitle();
+}
+
+function drawBackground() {
+  // Deep cosmic gradient: near-black navy → deep violet → indigo
+  const bg = ctx.createRadialGradient(W*0.5, H*0.42, 0, W*0.5, H*0.5, W*0.72);
+  bg.addColorStop(0,   '#1a0e3e');
+  bg.addColorStop(0.3, '#110a2e');
+  bg.addColorStop(0.65,'#0c0720');
+  bg.addColorStop(1,   '#060410');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawNebula() {
+  // Soft nebula clouds at various positions
+  const clouds = [
+    { x: 0.5,  y: 0.38, r: 0.38, c1: 'rgba(80,30,160,0.22)',  c2: 'rgba(80,30,160,0)' },
+    { x: 0.28, y: 0.22, r: 0.22, c1: 'rgba(40,20,120,0.18)',  c2: 'rgba(40,20,120,0)' },
+    { x: 0.75, y: 0.65, r: 0.20, c1: 'rgba(100,40,180,0.14)', c2: 'rgba(100,40,180,0)' },
+    { x: 0.18, y: 0.70, r: 0.18, c1: 'rgba(30,15,90,0.12)',   c2: 'rgba(30,15,90,0)' },
+    { x: 0.82, y: 0.28, r: 0.16, c1: 'rgba(60,20,140,0.16)',  c2: 'rgba(60,20,140,0)' },
+    { x: 0.5,  y: 0.55, r: 0.28, c1: 'rgba(120,50,200,0.12)', c2: 'rgba(120,50,200,0)' },
+  ];
+  clouds.forEach(c => {
+    const g = ctx.createRadialGradient(c.x*W, c.y*H, 0, c.x*W, c.y*H, c.r*W);
+    g.addColorStop(0, c.c1);
+    g.addColorStop(1, c.c2);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  });
+}
+
+// Constellation data: normalized [0..1] coords, connected pairs
+const CONSTELLATIONS = [
+  // Orion-like — left side
+  {
+    stars: [
+      [0.12, 0.18], [0.20, 0.24], [0.16, 0.32],
+      [0.22, 0.30], [0.26, 0.38], [0.14, 0.42], [0.20, 0.47]
+    ],
+    lines: [[0,1],[1,2],[1,3],[3,4],[4,5],[4,6],[2,5]]
+  },
+  // Cassiopeia-like — top right
+  {
+    stars: [
+      [0.68, 0.08], [0.76, 0.14], [0.82, 0.10],
+      [0.88, 0.16], [0.94, 0.11]
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4]]
+  },
+  // Southern cross — bottom right
+  {
+    stars: [
+      [0.82, 0.72], [0.88, 0.78], [0.94, 0.74],
+      [0.88, 0.68], [0.88, 0.84]
+    ],
+    lines: [[0,2],[1,3],[1,4]]
+  },
+  // Small dipper fragment — top left
+  {
+    stars: [
+      [0.06, 0.56], [0.12, 0.60], [0.10, 0.68],
+      [0.16, 0.72], [0.22, 0.70]
+    ],
+    lines: [[0,1],[1,2],[2,3],[3,4]]
+  },
+];
+
+function drawConstellationLines() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(180, 150, 255, 0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 6]);
+  ctx.shadowColor = 'rgba(180,150,255,0.4)';
+  ctx.shadowBlur = 6;
+  CONSTELLATIONS.forEach(con => {
+    con.lines.forEach(([a, b]) => {
+      ctx.beginPath();
+      ctx.moveTo(con.stars[a][0]*W, con.stars[a][1]*H);
+      ctx.lineTo(con.stars[b][0]*W, con.stars[b][1]*H);
+      ctx.stroke();
+    });
+  });
+  ctx.restore();
+}
+
+function drawStarField() {
+  // 340 background stars, varying brightness
+  for (let i = 0; i < 340; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const r = randRange(0.4, 2.0);
+    const a = randRange(0.15, 0.75);
+    const hue = randRange(200, 280);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = `hsla(${hue},60%,90%,${a})`;
+    ctx.shadowColor = `hsla(${hue},80%,95%,0.5)`;
+    ctx.shadowBlur = r * 3;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Constellation node stars
+  CONSTELLATIONS.forEach(con => {
+    con.stars.forEach(([nx, ny]) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(nx*W, ny*H, 2.8, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(220,200,255,0.9)';
+      ctx.shadowColor = 'rgba(200,170,255,1)';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.restore();
+    });
+  });
+}
+
+function drawTarotCard() {
+  const cx = W * 0.5;
+  const cy = H * 0.5;
+
+  // Card dimensions
+  const cw = 230, ch = 370;
+  const x = cx - cw/2, y = cy - ch/2 - 18;
+
+  ctx.save();
+
+  // Card shadow / glow
+  ctx.shadowColor = 'rgba(120, 70, 255, 0.6)';
+  ctx.shadowBlur = 50;
+
+  // Card border outer glow
+  const glowGrad = ctx.createLinearGradient(x, y, x+cw, y+ch);
+  glowGrad.addColorStop(0,   'rgba(160,110,255,0.9)');
+  glowGrad.addColorStop(0.5, 'rgba(200,160,255,0.7)');
+  glowGrad.addColorStop(1,   'rgba(100,60,200,0.9)');
+  ctx.strokeStyle = glowGrad;
+  ctx.lineWidth = 2.5;
+  roundRect(ctx, x-2, y-2, cw+4, ch+4, 14);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  // Card fill — dark with subtle gradient
+  const cardFill = ctx.createLinearGradient(x, y, x, y+ch);
+  cardFill.addColorStop(0,   '#130c30');
+  cardFill.addColorStop(0.5, '#0f0825');
+  cardFill.addColorStop(1,   '#0a0518');
+  ctx.fillStyle = cardFill;
+  roundRect(ctx, x, y, cw, ch, 12);
+  ctx.fill();
+
+  // Card inner border (ornate double line)
+  const innerX = x + 14, innerY = y + 14;
+  const innerW = cw - 28, innerH = ch - 28;
+  ctx.strokeStyle = 'rgba(160,120,240,0.5)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, innerX, innerY, innerW, innerH, 6);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,120,240,0.25)';
+  ctx.lineWidth = 0.5;
+  roundRect(ctx, innerX+4, innerY+4, innerW-8, innerH-8, 4);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Ornament corners on card
+  drawCardCornerOrnament(x+14, y+14, 0);
+  drawCardCornerOrnament(x+cw-14, y+14, 90);
+  drawCardCornerOrnament(x+cw-14, y+ch-14, 180);
+  drawCardCornerOrnament(x+14, y+ch-14, 270);
+
+  // Sun symbol inside card — top
+  drawSunSymbol(cx, cy - 75);
+
+  // World / eye symbol center
+  drawEyeSymbol(cx, cy + 40);
+
+  // Moon crescent — card bottom ornament
+  drawMoonCrescent(cx, cy + 130);
+}
+
+function drawCardCornerOrnament(x, y, deg) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(deg * Math.PI/180);
+  ctx.strokeStyle = 'rgba(180,140,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(16, 0);
+  ctx.moveTo(0, 0); ctx.lineTo(0, 16);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(200,170,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSunSymbol(cx, cy) {
+  ctx.save();
+  // Sun core
+  const sunGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 38);
+  sunGrad.addColorStop(0,   'rgba(255,240,140,0.95)');
+  sunGrad.addColorStop(0.45,'rgba(255,200,60,0.85)');
+  sunGrad.addColorStop(0.7, 'rgba(220,140,30,0.5)');
+  sunGrad.addColorStop(1,   'rgba(200,100,20,0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 38, 0, Math.PI*2);
+  ctx.fill();
+
+  // Inner circle
+  ctx.strokeStyle = 'rgba(255,240,160,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Sun rays
+  const rays = 12;
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2;
+    const r1 = 22, r2 = i % 2 === 0 ? 36 : 30;
+    ctx.strokeStyle = i % 2 === 0
+      ? 'rgba(255,240,140,0.75)'
+      : 'rgba(255,220,100,0.45)';
+    ctx.lineWidth = i % 2 === 0 ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1);
+    ctx.lineTo(cx + Math.cos(angle)*r2, cy + Math.sin(angle)*r2);
+    ctx.stroke();
+  }
+
+  // Center dot
+  ctx.fillStyle = 'rgba(255,250,200,0.95)';
+  ctx.shadowColor = 'rgba(255,240,120,0.8)';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEyeSymbol(cx, cy) {
+  ctx.save();
+  const ew = 72, eh = 30;
+
+  // Eye glow
+  ctx.shadowColor = 'rgba(160,120,255,0.6)';
+  ctx.shadowBlur = 20;
+
+  // Eye outline
+  ctx.strokeStyle = 'rgba(200,170,255,0.85)';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(cx - ew/2, cy);
+  ctx.bezierCurveTo(cx - ew/4, cy - eh, cx + ew/4, cy - eh, cx + ew/2, cy);
+  ctx.bezierCurveTo(cx + ew/4, cy + eh, cx - ew/4, cy + eh, cx - ew/2, cy);
+  ctx.stroke();
+
+  // Iris
+  ctx.shadowBlur = 0;
+  const irisGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 14);
+  irisGrad.addColorStop(0,   'rgba(80,40,200,0.95)');
+  irisGrad.addColorStop(0.5, 'rgba(100,60,220,0.8)');
+  irisGrad.addColorStop(1,   'rgba(140,90,255,0.6)');
+  ctx.fillStyle = irisGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 14, 0, Math.PI*2);
+  ctx.fill();
+
+  // Pupil
+  ctx.fillStyle = '#080410';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI*2);
+  ctx.fill();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(220,200,255,0.7)';
+  ctx.beginPath();
+  ctx.arc(cx+4, cy-4, 2.5, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawMoonCrescent(cx, cy) {
+  ctx.save();
+  const r = 20;
+
+  ctx.shadowColor = 'rgba(200,180,255,0.5)';
+  ctx.shadowBlur = 16;
+
+  // Outer moon
+  ctx.fillStyle = 'rgba(210,190,255,0.75)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fill();
+
+  // Cutout for crescent
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  ctx.beginPath();
+  ctx.arc(cx + r*0.45, cy - r*0.05, r*0.82, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Redraw crescent with color
+  ctx.fillStyle = 'rgba(210,190,255,0.75)';
+  ctx.beginPath();
+  // Crescent shape via clipping
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI*0.65, Math.PI*0.65);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = 'rgba(210,190,255,0.8)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawCelestialSymbols() {
+  // Four-pointed stars scattered around
+  const sparkles = [
+    [0.14, 0.09, 14, 1.0],
+    [0.88, 0.05, 11, 0.85],
+    [0.05, 0.38, 10, 0.7],
+    [0.93, 0.45, 9,  0.75],
+    [0.10, 0.82, 12, 0.8],
+    [0.90, 0.88, 10, 0.65],
+    [0.50, 0.04, 8,  0.6],
+    [0.32, 0.95, 9,  0.55],
+    [0.70, 0.97, 8,  0.5],
+  ];
+  sparkles.forEach(([nx, ny, size, alpha]) => {
+    drawFourPointStar(nx*W, ny*H, size, alpha);
+  });
+
+  // Saturn/planet ring symbol — top right area
+  drawRingedPlanet(W*0.80, H*0.22);
+
+  // Small pentagram — bottom left
+  drawPentagram(W*0.17, H*0.83, 26);
+}
+
+function drawFourPointStar(x, y, size, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = `rgba(230,215,255,${alpha})`;
+  ctx.shadowColor = `rgba(200,180,255,${alpha})`;
+  ctx.shadowBlur = size * 2;
+
+  // Main cross
+  for (let rot = 0; rot < 2; rot++) {
+    ctx.rotate(rot === 0 ? 0 : Math.PI/4);
+    const s = rot === 0 ? size : size * 0.55;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.quadraticCurveTo(s*0.18, -s*0.18, s, 0);
+    ctx.quadraticCurveTo(s*0.18, s*0.18, 0, s);
+    ctx.quadraticCurveTo(-s*0.18, s*0.18, -s, 0);
+    ctx.quadraticCurveTo(-s*0.18, -s*0.18, 0, -s);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRingedPlanet(cx, cy) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Ring (ellipse behind planet)
+  ctx.save();
+  ctx.scale(1, 0.35);
+  ctx.strokeStyle = 'rgba(170,130,255,0.55)';
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = 'rgba(160,120,255,0.4)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(0, 0, 28, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Planet
+  const pg = ctx.createRadialGradient(-5, -5, 2, 0, 0, 18);
+  pg.addColorStop(0,   'rgba(160,110,255,0.9)');
+  pg.addColorStop(0.6, 'rgba(100,60,200,0.85)');
+  pg.addColorStop(1,   'rgba(60,30,130,0.8)');
+  ctx.fillStyle = pg;
+  ctx.shadowColor = 'rgba(140,90,255,0.5)';
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.arc(0, 0, 18, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawPentagram(cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-Math.PI/2);
+
+  ctx.strokeStyle = 'rgba(180,150,255,0.6)';
+  ctx.lineWidth = 1.2;
+  ctx.shadowColor = 'rgba(180,150,255,0.4)';
+  ctx.shadowBlur = 8;
+
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 4 * Math.PI) / 5;
+    if (i === 0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+    else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+  }
+  ctx.closePath();
+  ctx.stroke();
+
+  // Outer circle
+  ctx.strokeStyle = 'rgba(160,130,240,0.35)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(0, 0, r+5, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBrightStars() {
+  // A few prominent sparkle stars
+  const bright = [
+    [0.08, 0.12, 18, 'rgba(220,210,255,0.9)'],
+    [0.92, 0.10, 16, 'rgba(210,230,255,0.85)'],
+    [0.04, 0.56, 14, 'rgba(200,220,255,0.8)'],
+    [0.96, 0.60, 13, 'rgba(220,200,255,0.75)'],
+    [0.48, 0.02, 12, 'rgba(230,220,255,0.8)'],
+    [0.22, 0.97, 11, 'rgba(210,200,255,0.7)'],
+    [0.78, 0.96, 11, 'rgba(210,200,255,0.7)'],
+  ];
+  bright.forEach(([nx, ny, size, color]) => {
+    ctx.save();
+    ctx.translate(nx*W, ny*H);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * 2.5;
+
+    // Cross spike
+    for (let r = 0; r < 2; r++) {
+      ctx.save();
+      ctx.rotate(r * Math.PI/4);
+      const s = r === 0 ? size : size * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.quadraticCurveTo(s*0.15, -s*0.15, s, 0);
+      ctx.quadraticCurveTo(s*0.15, s*0.15, 0, s);
+      ctx.quadraticCurveTo(-s*0.15, s*0.15, -s, 0);
+      ctx.quadraticCurveTo(-s*0.15, -s*0.15, 0, -s);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  });
+}
+
+function drawGlowOverlay() {
+  // Central radial vignette — subtle light from card area
+  const vg = ctx.createRadialGradient(W*0.5, H*0.48, 80, W*0.5, H*0.5, W*0.62);
+  vg.addColorStop(0,   'rgba(80,40,160,0.0)');
+  vg.addColorStop(0.55,'rgba(20,10,60,0.0)');
+  vg.addColorStop(1,   'rgba(6,3,16,0.65)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Soft purple ambient glow behind the card
+  const ag = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, 260);
+  ag.addColorStop(0,   'rgba(100,50,200,0.08)');
+  ag.addColorStop(0.6, 'rgba(60,20,140,0.04)');
+  ag.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = ag;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawTitle() {
+  const cx = W * 0.5;
+
+  // "ANCIENT" top label
+  ctx.save();
+  ctx.font = 'bold 44px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.letterSpacing = '0.3em';
+
+  // Text glow
+  ctx.shadowColor = 'rgba(200,170,255,0.8)';
+  ctx.shadowBlur = 20;
+
+  const titleGrad = ctx.createLinearGradient(cx-140, 0, cx+140, 0);
+  titleGrad.addColorStop(0,   '#a080e0');
+  titleGrad.addColorStop(0.5, '#e0d0ff');
+  titleGrad.addColorStop(1,   '#a080e0');
+  ctx.fillStyle = titleGrad;
+  ctx.fillText('ANCIENT', cx, H * 0.88);
+
+  // "TAROT" subtitle
+  ctx.shadowBlur = 14;
+  ctx.font = '600 30px Georgia, serif';
+  const subGrad = ctx.createLinearGradient(cx-100, 0, cx+100, 0);
+  subGrad.addColorStop(0,   '#7055b0');
+  subGrad.addColorStop(0.5, '#c8b4f0');
+  subGrad.addColorStop(1,   '#7055b0');
+  ctx.fillStyle = subGrad;
+  ctx.fillText('TAROT', cx, H * 0.94);
+
+  // Decorative line under TAROT
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = 'rgba(160,130,240,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 60, H*0.965);
+  ctx.lineTo(cx + 60, H*0.965);
+  ctx.stroke();
+
+  // Small diamond dividers
+  [cx - 70, cx + 70].forEach(dx => {
+    ctx.fillStyle = 'rgba(180,150,255,0.65)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(dx, H*0.965 - 4);
+    ctx.lineTo(dx + 5, H*0.965);
+    ctx.lineTo(dx, H*0.965 + 4);
+    ctx.lineTo(dx - 5, H*0.965);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+// Helper: rounded rectangle path
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function redraw() {
+  seed = Math.floor(Math.random() * 99999);
+  draw();
+}
+
+function downloadIcon() {
+  draw(); // ensure latest
+  const link = document.createElement('a');
+  link.download = 'AncientTarot_AppIcon_1024.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// Initial render
+draw();
+</script>
+</body>
+</html>
